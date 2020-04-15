@@ -1,13 +1,20 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
+import { connect } from 'react-redux'
 import '../../App.css';
-import { Row, Col, Card, Button } from 'antd';
+import { Row, Col, Card, Button, Tag } from 'antd';
 import ModalBlog from '../../components/modal-blog'
 import Header from '../../components/header';
+import {getArticles} from '../../store/actions/articleActions'
 import './main.css';
 
 const { Meta } = Card;
 
-function Main() {
+const onMount = props => () => {
+  props.getArticles()
+}
+
+
+function Main(props) {
   const [modalBlogVisible, setModalBlogVisible] = useState(false)
 
   const openModal = () => {
@@ -17,6 +24,26 @@ function Main() {
   const closeModal = () => {
     setModalBlogVisible(false)
   }
+
+  useEffect(onMount(props), [])
+
+
+  console.log("Hello!", props.articleReducer)
+  const {articles} = props.articleReducer
+
+  const articlesList = articles.map(item => (
+            <Col span={12}>
+                  <Card
+                  hoverable
+                 className="blog-item"
+                  cover={<img alt="example" src={item.image || '/images/2.jpg'} />}
+                >
+                  <Meta className="card-meta" title={item.title} description={item.description} />
+                  {item.tags.map(tag => (<Tag>{tag.name}</Tag>))}
+                </Card>
+              </Col>
+  ))
+
   return (
     <div>
       
@@ -33,52 +60,7 @@ function Main() {
           <Col span={18}>
 
             <Row>
-              <Col span={12}>
-                  <Card
-                  hoverable
-                 className="blog-item"
-                  cover={<img alt="example" src="/images/2.jpg" />}
-                >
-                  <Meta title="Europe Street beat" description="www.instagram.com" />
-                </Card>
-              </Col>
-              <Col span={12}>
-                  <Card
-                  hoverable
-                 className="blog-item"
-                  cover={<img alt="example" src="/images/2.jpg" />}
-                >
-                  <Meta title="Europe Street beat" description="www.instagram.com" />
-                </Card>
-              </Col>
-              <Col span={12}>
-                  <Card
-                  hoverable
-                 className="blog-item"
-                  cover={<img alt="example" src="/images/2.jpg" />}
-                >
-                  <Meta title="Europe Street beat" description="www.instagram.com" />
-                </Card>
-              </Col>
-              <Col span={12}>
-                  <Card
-                  hoverable
-                 className="blog-item"
-                  cover={<img alt="example" src="/images/2.jpg" />}
-                >
-                  <Meta title="Europe Street beat" description="www.instagram.com" />
-                </Card>
-              </Col>
-              <Col span={12}>
-                  <Card
-                  hoverable
-                 className="blog-item"
-                  cover={<img alt="example" src="/images/2.jpg" />}
-                >
-                  <Meta title="Europe Street beat" description="www.instagram.com" />
-                </Card>
-              </Col>
-              
+              {articlesList}
             </Row>
            
           </Col>
@@ -98,4 +80,15 @@ function Main() {
   );
 }
 
-export default Main;
+const mapStateToProps = state =>({
+  articleReducer: state.articleReducer
+})
+
+const mapDispatchToProps = {
+  getArticles,
+}
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Main)

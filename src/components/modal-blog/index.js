@@ -2,8 +2,10 @@ import React, {useState, useEffect} from 'react';
 import { Modal, Form, Input, Select, Upload, message } from 'antd';
 import { LoadingOutlined, PlusOutlined } from '@ant-design/icons';
 
-const {Option} = Select
 
+import { connect } from 'react-redux'
+import {getCatgories, getTags, saveArticle} from '../../store/actions/articleActions'
+const {Option} = Select
 
 function getBase64(img, callback) {
     const reader = new FileReader();
@@ -23,17 +25,36 @@ function getBase64(img, callback) {
     return isJpgOrPng && isLt2M;
   }
 
-function ModalBlog({modalBlogVisible, close}) {
+const onMount = props => () => {
+  props.getCatgories()
+  props.getTags()
+}
+  
+
+function ModalBlog(props) {
+  const {modalBlogVisible, close, articleReducer} = props
   const [visible, setVisible] = useState(modalBlogVisible)
   const [imageUrl, setImageUrl] = useState(``)
   const [loading, setLoading] = useState(false)
+  const {tags, categories} = articleReducer
+  const [formData, setFormData] = useState({
+    title: ``,
+    description: ``,
+    category: null,
+    tags: [],
+    image: null
+  })
 
+  console.log(tags, categories)
   useEffect(() => {
     setVisible(modalBlogVisible)
   }, [modalBlogVisible])
 
-  const handleOk = e => {
-    console.log(e);
+
+  useEffect(onMount(props), [])
+
+  const handleOk = () => {
+    props.saveArticle(formData)
     close();
   };
 
@@ -52,18 +73,16 @@ function ModalBlog({modalBlogVisible, close}) {
     },
   };
 
-  const handleChange = (info) => {
-    if (info.file.status === 'uploading') {
-        setLoading(true);
-        return;
-      }
-      if (info.file.status === 'done') {
-        // Get this url from response in real world.
-        getBase64(info.file.originFileObj, imageUrl => {
-            setLoading(false);
-            setImageUrl(imageUrl)
-        });
-      }
+  const handleChange = e => {
+    setFormData({...formData, [e.target.name]: e.target.value})
+  }
+
+  const categoryChange = value => {
+    setFormData({...formData, category: value})
+  }
+
+  const tagsChange = value => {
+    setFormData({...formData, tags: value})
   }
 
   const uploadButton = (
@@ -72,6 +91,22 @@ function ModalBlog({modalBlogVisible, close}) {
       <div className="ant-upload-text">Upload</div>
     </div>
   );
+
+  const fileChange = info => {
+    if (info.file.status === 'uploading') {
+      setLoading(true);
+      return;
+    }
+    if (info.file.status === 'done') {
+      // Get this url from response in real world.
+      getBase64(info.file.originFileObj, imageUrl => {
+          setLoading(false);
+          setImageUrl(imageUrl)
+      });
+
+      setFormData({...formData, image: info.file.originFileObj})
+    }
+  }
 
 
   return (
@@ -84,18 +119,13 @@ function ModalBlog({modalBlogVisible, close}) {
 
         <Form layout="vertical" name="nest-messages" onFinish={onFinish} validateMessages={validateMessages}>
         <Form.Item name={['blog', 'title']} label="Title" rules={[{ required: true }]}>
-            <Input />
+            <Input name="title" value={formData.title} onChange={handleChange}/>
         </Form.Item>
         
 
         <Form.Item name={['blog', 'category']} label="Category">
-            <Select defaultValue="lucy" onChange={handleChange}>
-                <Option value="jack">Jack</Option>
-                <Option value="lucy">Lucy</Option>
-                <Option value="disabled" disabled>
-                    Disabled
-                </Option>
-                <Option value="Yiminghe">yiminghe</Option>
+            <Select onChange={categoryChange} name="category">
+              {categories.map(item => (<Option value={item.id}>{item.name}</Option>))}
             </Select>
         </Form.Item>
 
@@ -103,57 +133,31 @@ function ModalBlog({modalBlogVisible, close}) {
             <Select
                 mode="multiple"
                 style={{ width: '100%' }}
-                placeholder="select one country"
-                defaultValue={['china']}
-                onChange={handleChange}
+                placeholder="select multiple tag"
+                defaultValue={[]}
+                onChange={tagsChange}
                 optionLabelProp="label"
+                name="tags"
             >
-                <Option value="china" label="China">
-                <div className="demo-option-label-item">
-                    <span role="img" aria-label="China">
-                    🇨🇳
-                    </span>
-                    China (中国)
-                </div>
-                </Option>
-                <Option value="usa" label="USA">
-                <div className="demo-option-label-item">
-                    <span role="img" aria-label="USA">
-                    🇺🇸
-                    </span>
-                    USA (美国)
-                </div>
-                </Option>
-                <Option value="japan" label="Japan">
-                <div className="demo-option-label-item">
-                    <span role="img" aria-label="Japan">
-                    🇯🇵
-                    </span>
-                    Japan (日本)
-                </div>
-                </Option>
-                <Option value="korea" label="Korea">
-                <div className="demo-option-label-item">
-                    <span role="img" aria-label="Korea">
-                    🇰🇷
-                    </span>
-                    Korea (韩国)
-                </div>
-                </Option>
+              {tags.map(item => (<Option value={item.id} label={item.name}>
+                  <div className="demo-option-label-item">
+                      {item.name}
+                  </div>
+                </Option>))}
             </Select>
         </Form.Item>
         <Form.Item name={['blog', 'description']} label="Description">
-            <Input.TextArea />
+            <Input.TextArea name="description" value={formData.description} onChange={handleChange}/>
         </Form.Item>
         <Form.Item>
             <Upload
-                name="avatar"
+                name="image"
                 listType="picture-card"
                 className="avatar-uploader"
                 showUploadList={false}
                 action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
                 beforeUpload={beforeUpload}
-                onChange={handleChange}
+                onChange={fileChange}
             >
                 {imageUrl ? <img src={imageUrl} alt="avatar" style={{ width: '100%' }} /> : uploadButton}
             </Upload>
@@ -164,4 +168,17 @@ function ModalBlog({modalBlogVisible, close}) {
   );
 }
 
-export default ModalBlog;
+const mapStateToProps = state =>({
+  articleReducer: state.articleReducer
+})
+
+const mapDispatchToProps = {
+  getCatgories,
+  getTags,
+  saveArticle
+}
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(ModalBlog)
